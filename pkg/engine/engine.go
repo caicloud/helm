@@ -207,7 +207,7 @@ func (e *Engine) render(tpls map[string]renderable) (map[string]string, error) {
 		// is set. Since missing=error will never get here, we do not need to handle
 		// the Strict case.
 		data := strings.Replace(buf.String(), "<no value>", "", -1)
-		data = pollute(data, tpl.path)
+		data = pollute(data, &tpl)
 		rendered[file] = data
 		buf.Reset()
 	}
