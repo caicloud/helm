@@ -160,6 +160,8 @@ func TestUpdate(t *testing.T) {
 				return newResponse(200, &listA.Items[0])
 			case p == "/namespaces/default/pods/otter" && m == "GET":
 				return newResponse(200, &listA.Items[1])
+			case p == "/namespaces/default/pods/squid" && m == "GET":
+				return newResponse(200, &listA.Items[2])
 			case p == "/namespaces/default/pods/dolphin" && m == "GET":
 				return newResponse(404, notFoundBody())
 			case p == "/namespaces/default/pods/starfish" && m == "PATCH":
@@ -202,11 +204,14 @@ func TestUpdate(t *testing.T) {
 	// }
 	expectedActions := []string{
 		"/namespaces/default/pods/starfish:GET",
+		"/namespaces/default/pods/starfish:GET",
 		"/namespaces/default/pods/starfish:PATCH",
+		"/namespaces/default/pods/otter:GET",
 		"/namespaces/default/pods/otter:GET",
 		"/namespaces/default/pods/otter:GET",
 		"/namespaces/default/pods/dolphin:GET",
 		"/namespaces/default/pods:POST",
+		"/namespaces/default/pods/squid:GET",
 	}
 	if len(expectedActions) != len(actions) {
 		t.Errorf("unexpected number of requests, expected %d, got %d", len(expectedActions), len(actions))
