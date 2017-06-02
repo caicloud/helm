@@ -49,6 +49,8 @@ import (
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/kubectl/resource"
 	"k8s.io/kubernetes/pkg/printers"
+
+	"k8s.io/helm/pkg/releaseutil"
 )
 
 // ErrNoObjectsVisited indicates that during a visit operation, no matching objects were found.
@@ -347,11 +349,23 @@ func createResource(info *resource.Info) error {
 }
 
 func deleteResource(c *Client, info *resource.Info) error {
+	helper := resource.NewHelper(info.Client, info.Mapping)
+	runningObj, err := helper.Get(info.Namespace, info.Name, info.Export)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if !releaseutil.MatchRelease(info.VersionedObject, runningObj) {
+		log.Printf("Delete: Ignore unmatched object: %s/%s", info.Namespace, info.Name)
+		return nil
+	}
 	reaper, err := c.Reaper(info.Mapping)
 	if err != nil {
 		// If there is no reaper for this resources, delete it.
 		if kubectl.IsNoSuchReaperError(err) {
-			return resource.NewHelper(info.Client, info.Mapping).Delete(info.Namespace, info.Name)
+			return helper.Delete(info.Namespace, info.Name)
 		}
 		return err
 	}
@@ -390,6 +404,15 @@ func createPatch(mapping *meta.RESTMapping, target, current runtime.Object) ([]b
 }
 
 func updateResource(c *Client, target *resource.Info, currentObj runtime.Object, recreate bool) error {
+	helper := resource.NewHelper(target.Client, target.Mapping)
+	runningObj, err := helper.Get(target.Namespace, target.Name, target.Export)
+	if err != nil {
+		return err
+	}
+	if !releaseutil.MatchRelease(target.VersionedObject, runningObj) {
+		log.Printf("Update: Find unmatched object: %s/%s", target.Namespace, target.Name)
+		return fmt.Errorf("Update: Unmatched object: %s/%s", target.Namespace, target.Name)
+	}
 	patch, patchType, err := createPatch(target.Mapping, target.Object, currentObj)
 	if err != nil {
 		return fmt.Errorf("failed to create patch: %s", err)
@@ -405,7 +428,6 @@ func updateResource(c *Client, target *resource.Info, currentObj runtime.Object,
 	}
 
 	// send patch to server
-	helper := resource.NewHelper(target.Client, target.Mapping)
 	obj, err := helper.Patch(target.Namespace, target.Name, patchType, patch)
 	if err != nil {
 		return err
