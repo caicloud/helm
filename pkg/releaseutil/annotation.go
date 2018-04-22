@@ -21,9 +21,11 @@ import (
 	"log"
 
 	apps "k8s.io/api/apps/v1"
+	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	batch "k8s.io/api/batch/v1"
 	batchv2 "k8s.io/api/batch/v1beta1"
 	app "k8s.io/api/core/v1"
+	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -86,11 +88,27 @@ func InjectAnnotations(resource string, annos map[AnnotationKey]string) string {
 
 	// check and add annotations to the template of specific types
 	switch ins := obj.(type) {
+	case *extensions.Deployment:
+		{
+			ins.Spec.Template.Annotations = merge(ins.Spec.Template.Annotations, annos)
+		}
+	case *extensions.DaemonSet:
+		{
+			ins.Spec.Template.Annotations = merge(ins.Spec.Template.Annotations, annos)
+		}
+	case *appsv1beta1.Deployment:
+		{
+			ins.Spec.Template.Annotations = merge(ins.Spec.Template.Annotations, annos)
+		}
 	case *apps.Deployment:
 		{
 			ins.Spec.Template.Annotations = merge(ins.Spec.Template.Annotations, annos)
 		}
 	case *apps.DaemonSet:
+		{
+			ins.Spec.Template.Annotations = merge(ins.Spec.Template.Annotations, annos)
+		}
+	case *extensions.ReplicaSet:
 		{
 			ins.Spec.Template.Annotations = merge(ins.Spec.Template.Annotations, annos)
 		}
